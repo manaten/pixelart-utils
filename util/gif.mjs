@@ -64,7 +64,7 @@ function regularizeOption({ blitImages = [], ...option }, frameCount) {
           } else if (typeof currentUseFrame?.frame === "number") {
             return currentUseFrame.frame;
           }
-          return opt.frame ? opt.frame : index;
+          return typeof opt.frame === "number" ? opt.frame : index;
         })() % frameCount;
 
       return {
@@ -82,11 +82,15 @@ function regularizeOption({ blitImages = [], ...option }, frameCount) {
     const newOption = regularizeOneOption(option);
     return {
       ...newOption,
-      blitImages: blitImages.map(({ posX, posY, ...biOption }) => ({
-        posX,
-        posY,
-        ...regularizeOneOption({ ...newOption, ...biOption }),
-      })),
+
+      blitImages: blitImages.map(({ posX, posY, ...biOption }) => {
+        const { frame: _, ...parentOption } = newOption;
+        return {
+          posX,
+          posY,
+          ...regularizeOneOption({ ...parentOption, ...biOption }),
+        };
+      }),
     };
   });
 }
@@ -134,7 +138,7 @@ export async function manipulate(
 
   const outPath = fileName && url.fileURLToPath(new URL(fileName, basePath));
   await mkdirp(path.dirname(outPath));
-  console.log(`write ${outPath}`);
+  console.log(`write ${outPath} (${frames.length} frames)`);
 
   return await GifUtil.write(outPath, frames, original);
 }
