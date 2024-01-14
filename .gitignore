@@ -1,0 +1,19 @@
+# ルートにプライベートのドット絵ファイルを置いているので、基本的に全無視してソースコードのみバージョン管理する
+node_modules
+*
+
+# rootのバージョン管理したいファイル
+!.gitignore
+!*.js
+!.prettierrc
+!package.json
+!package-lock.json
+!README.md
+!.lintstagedrc
+!jsconfig.json
+
+# バージョン管理したいサブディレクトリ
+!.vscode/
+!.vscode/**
+!util/
+!util/**
