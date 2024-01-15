@@ -10,14 +10,13 @@
     "lint-staged": "lint-staged -c .lintstagedrc",
     "fix": "eslint --fix ./**/*.{js,jsx,ts,tsx}",
     "prettier": "prettier --write --ignore-unknown .",
-    "build": "shx find \"**/*build.mjs\" | xargs -n1 node",
-    "watch": "onchange \"**/*.{mjs,gif}\" -- shx --silent find \"{{fileDir}}/build.mjs\" | xargs -n1 node"
+    "build": "node ./util/build-cli.mjs",
+    "watch": "onchange \"**/*.{mjs,gif}\" -- node ./util/build-cli.mjs {{file}}"
   },
   "dependencies": {
     "gifwrap": "^0.10.1",
     "jimp": "^0.22.10",
-    "mkdirp": "^3.0.1",
-    "sharp": "^0.32.6"
+    "mkdirp": "^3.0.1"
   },
   "devDependencies": {
     "@types/node": "^20.10.6",
@@ -25,10 +24,11 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-import-resolver-node": "^0.3.9",
     "eslint-plugin-import": "^2.29.1",
+    "glob": "^10.3.10",
     "husky": "^8.0.3",
     "lint-staged": "^15.2.0",
     "onchange": "^7.1.0",
     "prettier": "^3.0.3",
-    "shx": "^0.3.4"
+    "shelljs": "^0.8.5"
   }
 }
