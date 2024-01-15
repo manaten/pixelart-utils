@@ -11,7 +11,7 @@
     "fix": "eslint --fix ./**/*.{js,jsx,ts,tsx}",
     "prettier": "prettier --write --ignore-unknown .",
     "build": "shx find \"**/*build.mjs\" | xargs -n1 node",
-    "watch": "onchange \"**/*.gif\" -- shx --silent find \"{{fileDir}}/build.mjs\" | xargs -n1 node"
+    "watch": "onchange \"**/*.{mjs,gif}\" -- shx --silent find \"{{fileDir}}/build.mjs\" | xargs -n1 node"
   },
   "dependencies": {
     "gifwrap": "^0.10.1",
