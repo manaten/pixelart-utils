@@ -13,7 +13,7 @@
     "build": "node ./util/build-cli.mjs",
     "watch": "run-p watch:*",
     "watch:gif": "onchange \"**/*.{mjs,gif}\" -- node ./util/build-cli.mjs {{file}}",
-    "watch:edg": "onchange \"**/*.edg\" -e \"**/*temporary*\" -- edg2gif {{file}}"
+    "watch:edg": "onchange \"**/*.edg\" -e \"**/*temporary*\" -e \"**/*no_build*\" -- edg2gif {{file}}"
   },
   "dependencies": {
     "@manaten/edg2gif": "^0.0.1",

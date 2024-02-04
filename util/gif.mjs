@@ -84,8 +84,8 @@ function regularizeOption(option, frameCount) {
         posY: 0,
         x: 0,
         y: 0,
-        w: 0,
-        h: 0,
+        w: 1,
+        h: 1,
         scale: 1,
         ...fixOption(opt),
         ...fixOption(
@@ -108,10 +108,11 @@ function regularizeOption(option, frameCount) {
           regularizeOneOption({
             ...mainOption,
             ...biOption,
+            scale: mainOption.scale * (biOption.scale || 1),
           }).map(({ posX: posXInner, posY: posYInner, ...bio }) => ({
             ...bio,
-            posX: posX * bio.scale + posXInner,
-            posY: posY * bio.scale + posYInner,
+            posX: posX * mainOption.scale + posXInner,
+            posY: posY * mainOption.scale + posYInner,
           })),
         ),
       ];
