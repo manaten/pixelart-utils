@@ -28,82 +28,113 @@ export async function readGif(fileName, basePath) {
 
 /**
  * @typedef {Partial<RegularManipulateOption> & {
- *   useFrames?: (number | Partial<RegularManipulateOption>)[];
+ *   name?: string;
+ *   useFrames?: (number | ManipulateOption)[];
+ *   blitImages?: (ManipulateOption & { posX?: number, posY?: number } )[];
  * }} ManipulateOption
  */
 
 /**
  * 渡されたOptionをフレームごとの設定情報に正規化する
  *
- * @param {ManipulateOption & {
- *   blitImages?: (ManipulateOption & { posX: number, posY: number} )[]
- * }} option
+ * @param {ManipulateOption} option
  * @param {number} frameCount
  *
- * @returns {(RegularManipulateOption & {
- *   blitImages: (RegularManipulateOption & { posX: number, posY: number})[]
- * })[]}
+ * @returns {{
+ *   frames: ({
+ *     images: (RegularManipulateOption & { posX: number, posY: number })[]
+ *   })[]
+ * }}
  */
-function regularizeOption({ blitImages = [], ...option }, frameCount) {
+function regularizeOption(option, frameCount) {
   const outputFrameCount = Math.max(
-    ...blitImages.map((bi) => bi.useFrames?.length || 0),
-    option.useFrames?.length || frameCount,
+    frameCount,
+    option.useFrames?.length || 0,
+    ...(option.blitImages || []).map((bi) => bi.useFrames?.length || 0),
   );
 
-  return Array.from({ length: outputFrameCount }).map((_, index) => {
+  const frames = Array.from({ length: outputFrameCount }).map((_, index) => {
     /**
      * @param {ManipulateOption} option
-     * @returns {RegularManipulateOption}
+     * @returns {(RegularManipulateOption & { posX: number, posY: number })[]}
      */
     function regularizeOneOption({ useFrames, ...opt }) {
       const currentUseFrame = useFrames && useFrames[index % useFrames.length];
+
       const fixedFrame =
         (() => {
           if (typeof currentUseFrame === "number") {
             return currentUseFrame;
           } else if (typeof currentUseFrame?.frame === "number") {
             return currentUseFrame.frame;
+          } else if (typeof opt.frame === "number") {
+            return opt.frame;
           }
-          return typeof opt.frame === "number" ? opt.frame : index;
+          return index;
         })() % frameCount;
 
-      return {
+      /**
+       * @param {ManipulateOption} option
+       * @returns {Partial<RegularManipulateOption>}
+       */
+      const fixOption = ({ useFrames, blitImages, name, ...opt }) => opt;
+
+      const mainOption = {
+        posX: 0,
+        posY: 0,
         x: 0,
         y: 0,
         w: 0,
         h: 0,
         scale: 1,
-        ...opt,
-        ...(typeof currentUseFrame === "object" ? currentUseFrame : {}),
+        ...fixOption(opt),
+        ...fixOption(
+          typeof currentUseFrame === "object" ? currentUseFrame : {},
+        ),
         frame: fixedFrame,
       };
+
+      const blitImages = [
+        ...(opt.blitImages ? opt.blitImages : []),
+        ...(typeof currentUseFrame === "object" && currentUseFrame.blitImages
+          ? currentUseFrame.blitImages
+          : []),
+      ];
+
+      return [
+        mainOption,
+
+        ...blitImages.flatMap(({ posX = 0, posY = 0, ...biOption }) =>
+          regularizeOneOption({
+            ...mainOption,
+            ...biOption,
+          }).map(({ posX: posXInner, posY: posYInner, ...bio }) => ({
+            ...bio,
+            posX: posX * bio.scale + posXInner,
+            posY: posY * bio.scale + posYInner,
+          })),
+        ),
+      ];
     }
 
-    const newOption = regularizeOneOption(option);
-    return {
-      ...newOption,
-
-      blitImages: blitImages.map(({ posX, posY, ...biOption }) => {
-        const { frame: _, ...parentOption } = newOption;
-        return {
-          posX,
-          posY,
-          ...regularizeOneOption({ ...parentOption, ...biOption }),
-        };
-      }),
-    };
+    return { images: regularizeOneOption(option) };
   });
+
+  return { frames };
 }
+
+/**
+ * @typedef {ManipulateOption & {
+ *   fileName?: string;
+ *   basePath?: string;
+ * }} ManipulateOptionWithFileName
+ */
 
 /**
  * gifの指定したフレームをクロップ･スケール･合成処理する
  *
  * @param {Awaited<ReturnType<GifUtil.read>>} original
- * @param {ManipulateOption & {
- *   fileName?: string;
- *   basePath?: string;
- *   blitImages?: (ManipulateOption & { posX: number, posY: number} )[];
- * }} options
+ * @param {ManipulateOptionWithFileName} options
  */
 export async function manipulate(
   original,
@@ -113,6 +144,7 @@ export async function manipulate(
    * @param {RegularManipulateOption} option
    */
   function manipulateOneFrame({ frame, x, y, w, h, scale }) {
+    /** @type {import("jimp")} */
     const jimp = GifUtil.copyAsJimp(Jimp, original.frames[frame]);
     if (w > 0 && h > 0) {
       jimp.crop(x, y, w, h);
@@ -124,15 +156,28 @@ export async function manipulate(
   }
 
   const regularizedOption = regularizeOption(option, original.frames.length);
-  const frames = regularizedOption.map((opt) => {
-    const jimp = manipulateOneFrame(opt);
+  // console.log(JSON.stringify(regularizedOption, null, 2));
 
-    for (const biOpt of opt.blitImages) {
+  const frames = regularizedOption.frames.map(({ images }) => {
+    const jimp = manipulateOneFrame({
+      x: 0,
+      y: 0,
+      w: 1,
+      h: 1,
+      scale: 1,
+      frame: images[0].frame,
+    });
+    jimp.resize(
+      Math.max(...images.map((i) => i.posX + i.w * i.scale)),
+      Math.max(...images.map((i) => i.posY + i.h * i.scale)),
+    );
+
+    for (const biOpt of images) {
       const biJimp = manipulateOneFrame(biOpt);
       jimp.blit(biJimp, biOpt.posX, biOpt.posY);
     }
 
-    const frame = original.frames[opt.frame];
+    const frame = original.frames[images[0].frame];
     return new GifFrame(new BitmapImage(jimp.bitmap), { ...frame });
   });
 
