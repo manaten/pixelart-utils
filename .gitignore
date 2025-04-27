@@ -5,10 +5,10 @@ node_modules
 # rootのバージョン管理したいファイル
 !.gitignore
 !.editorconfig
+!.node-version
 !*.js
 !*.mjs
 !*.json
-!.prettierrc
 !README.md
 !.lintstagedrc
 

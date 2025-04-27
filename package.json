@@ -16,9 +16,9 @@
     "fix": "run-s fix:*",
     "fix:js": "run-s \"lint:js -- --fix\"",
     "fix:prettier": "prettier --write --ignore-unknown .",
-    "build": "node ./util/build-cli.mjs",
+    "build": "node ./util/build-cli.ts",
     "watch": "run-p watch:*",
-    "watch:gif": "onchange \"**/*.{mjs,gif}\" -- node ./util/build-cli.mjs {{file}}",
+    "watch:gif": "onchange \"**/*.{mjs,ts,gif}\" -- node ./util/build-cli.ts {{file}}",
     "watch:edg": "onchange \"**/*.edg\" -e \"**/*temporary*\" -e \"**/*no_build*\" -- edg2gif {{file}}"
   },
   "dependencies": {
@@ -33,6 +33,7 @@
     "@eslint/eslintrc": "^3.3.0",
     "@eslint/js": "^9.22.0",
     "@types/node": "^22.13.10",
+    "@types/shelljs": "^0.8.15",
     "@typescript-eslint/parser": "^8.26.1",
     "eslint": "^9.22.0",
     "eslint-config-prettier": "^10.1.1",
@@ -43,8 +44,7 @@
     "onchange": "^7.1.0",
     "prettier": "^3.4.2",
     "shelljs": "^0.8.5",
-    "tsx": "^4.19.3",
-    "typescript": "5.5",
-    "typescript-eslint": "^8.26.1"
+    "typescript": "5.8.3",
+    "typescript-eslint": "^8.31.0"
   }
 }
