@@ -67,6 +67,19 @@ export default tsEslint.config(
         },
       ],
 
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          args: "all",
+          argsIgnorePattern: "^_",
+          caughtErrors: "all",
+          caughtErrorsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          ignoreRestSiblings: true,
+        },
+      ],
+
       "import/named": 0,
       "import/no-unresolved": 0,
       "no-undef": 0,

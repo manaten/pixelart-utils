@@ -4,8 +4,8 @@ import shelljs from "shelljs";
 
 async function main() {
   const argFileName = process.argv[2]
-    ? path.resolve(path.dirname(process.argv[2]), "build.mjs")
-    : "**/build.mjs";
+    ? path.resolve(path.dirname(process.argv[2]), "build.{ts,mjs}")
+    : "**/build.{ts,mjs}";
 
   const files = await glob(argFileName, { ignore: "node_modules/**" });
 

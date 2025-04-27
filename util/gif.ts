@@ -6,47 +6,38 @@ import url, { fileURLToPath } from "url";
 
 /**
  * ファイルを読み込んでgifwrapのGIFオブジェクトを返す
- * @param {string} fileName
- * @param {string} basePath
- * @returns {Promise<import("gifwrap").Gif>}
  */
-export async function readGif(fileName, basePath) {
+export async function readGif(fileName: string, basePath: string) {
   const inputPath = fileURLToPath(new URL(fileName, basePath));
   return await GifUtil.read(inputPath.toString());
 }
 
-/**
- * @typedef {{
- *   x: number;
- *   y: number;
- *   w: number;
- *   h: number;
- *   frame: number
- *   scale: number;
- * }} RegularManipulateOption
- */
+type RegularManipulateOption = {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  frame: number;
+  scale: number;
+};
 
-/**
- * @typedef {Partial<RegularManipulateOption> & {
- *   name?: string;
- *   useFrames?: (number | ManipulateOption)[];
- *   blitImages?: (ManipulateOption & { posX?: number, posY?: number } )[];
- * }} ManipulateOption
- */
+type ManipulateOption = Partial<RegularManipulateOption> & {
+  name?: string;
+  useFrames?: (number | ManipulateOption)[];
+  blitImages?: (ManipulateOption & { posX?: number; posY?: number })[];
+};
 
 /**
  * 渡されたOptionをフレームごとの設定情報に正規化する
- *
- * @param {ManipulateOption} option
- * @param {number} frameCount
- *
- * @returns {{
- *   frames: ({
- *     images: (RegularManipulateOption & { posX: number, posY: number })[]
- *   })[]
- * }}
  */
-function regularizeOption(option, frameCount) {
+function regularizeOption(
+  option: ManipulateOption,
+  frameCount: number,
+): {
+  frames: {
+    images: (RegularManipulateOption & { posX: number; posY: number })[];
+  }[];
+} {
   const outputFrameCount = Math.max(
     frameCount,
     option.useFrames?.length || 0,
@@ -54,11 +45,13 @@ function regularizeOption(option, frameCount) {
   );
 
   const frames = Array.from({ length: outputFrameCount }).map((_, index) => {
-    /**
-     * @param {ManipulateOption} option
-     * @returns {(RegularManipulateOption & { posX: number, posY: number })[]}
-     */
-    function regularizeOneOption({ useFrames, ...opt }) {
+    function regularizeOneOption({
+      useFrames,
+      ...opt
+    }: ManipulateOption): (RegularManipulateOption & {
+      posX: number;
+      posY: number;
+    })[] {
       const currentUseFrame = useFrames && useFrames[index % useFrames.length];
 
       const fixedFrame =
@@ -73,11 +66,12 @@ function regularizeOption(option, frameCount) {
           return index;
         })() % frameCount;
 
-      /**
-       * @param {ManipulateOption} option
-       * @returns {Partial<RegularManipulateOption>}
-       */
-      const fixOption = ({ useFrames, blitImages, name, ...opt }) => opt;
+      const fixOption = ({
+        useFrames,
+        blitImages,
+        name,
+        ...opt
+      }: ManipulateOption) => opt;
 
       const mainOption = {
         posX: 0,
@@ -124,29 +118,27 @@ function regularizeOption(option, frameCount) {
   return { frames };
 }
 
-/**
- * @typedef {ManipulateOption & {
- *   fileName?: string;
- *   basePath?: string;
- * }} ManipulateOptionWithFileName
- */
+export type ManipulateOptionWithFileName = ManipulateOption & {
+  fileName?: string;
+  basePath?: string;
+};
 
 /**
  * gifの指定したフレームをクロップ･スケール･合成処理する
- *
- * @param {Awaited<ReturnType<GifUtil.read>>} original
- * @param {ManipulateOptionWithFileName} options
  */
 export async function manipulate(
-  original,
-  { fileName = "", basePath = "", ...option },
+  original: Awaited<ReturnType<typeof GifUtil.read>>,
+  { fileName = "", basePath = "", ...option }: ManipulateOptionWithFileName,
 ) {
-  /**
-   * @param {RegularManipulateOption} option
-   */
-  function manipulateOneFrame({ frame, x, y, w, h, scale }) {
-    /** @type {import("jimp")} */
-    const jimp = GifUtil.copyAsJimp(Jimp, original.frames[frame]);
+  function manipulateOneFrame({
+    frame,
+    x,
+    y,
+    w,
+    h,
+    scale,
+  }: RegularManipulateOption) {
+    const jimp: Jimp = GifUtil.copyAsJimp(Jimp, original.frames[frame]!);
     if (w > 0 && h > 0) {
       jimp.crop(x, y, w, h);
     }
@@ -166,7 +158,7 @@ export async function manipulate(
       w: 1,
       h: 1,
       scale: 1,
-      frame: images[0].frame,
+      frame: images[0]!.frame,
     });
     jimp.resize(
       Math.max(...images.map((i) => i.posX + i.w * i.scale)),
@@ -178,7 +170,7 @@ export async function manipulate(
       jimp.blit(biJimp, biOpt.posX, biOpt.posY);
     }
 
-    const frame = original.frames[images[0].frame];
+    const frame = original.frames[images[0]!.frame];
     return new GifFrame(new BitmapImage(jimp.bitmap), { ...frame });
   });
 
@@ -189,29 +181,27 @@ export async function manipulate(
   return await GifUtil.write(outPath, frames, original);
 }
 
+export type ManipulateFrameOption = {
+  fileName: string;
+  basePath: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  frame: number;
+  scale?: number;
+};
+
 /**
  * gifの1フレームをクロップ･スケール処理する
- *
- * @param {Awaited<ReturnType<GifUtil.read>>} original
- * @param {{
- *  fileName: string;
- *  basePath: string;
- *  x: number;
- *  y: number;
- *  w: number;
- *  h: number;
- *  frame: number;
- *  scale?: number;
- * }} options
  */
 export async function manipulateFrame(
-  original,
-  { fileName, basePath, x, y, w, h, frame, scale = 1 },
+  original: Awaited<ReturnType<typeof GifUtil.read>>,
+  { fileName, basePath, x, y, w, h, frame, scale = 1 }: ManipulateFrameOption,
 ) {
-  const f = original.frames[frame];
+  const f = original.frames[frame]!;
 
-  /** @type {import('jimp')} */
-  const j = GifUtil.copyAsJimp(Jimp, f).crop(x, y, w, h);
+  const j: Jimp = GifUtil.copyAsJimp(Jimp, f).crop(x, y, w, h);
   if (scale !== 1) {
     j.scale(5, Jimp.RESIZE_NEAREST_NEIGHBOR);
   }
