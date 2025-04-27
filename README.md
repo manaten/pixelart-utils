@@ -1,3 +1,6 @@
-# ts-node-cli-template
+# pixelart-utils
 
-manaten's ts-node cli script tempalate.
+manatenがドット絵を描くときに利用しているスクリプト郡。
+現状はjimp+gifwrapによる、gifのフレーム単位でのクロッピング･スケール変更･合成。
+
+ローカルではこのリポジトリ内でドット絵を描いており、そちらは公開予定はないため、基本的に本リポジトリではソースコード以外をignoreしています。
