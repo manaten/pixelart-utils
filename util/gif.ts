@@ -190,6 +190,13 @@ export type ManipulateFrameOption = {
   h: number;
   frame: number;
   scale?: number;
+  blitImages?: (Omit<
+    ManipulateFrameOption,
+    "fileName" | "basePath" | "blitImages"
+  > & {
+    posX?: number;
+    posY?: number;
+  })[];
 };
 
 /**
@@ -197,14 +204,44 @@ export type ManipulateFrameOption = {
  */
 export async function manipulateFrame(
   original: Awaited<ReturnType<typeof GifUtil.read>>,
-  { fileName, basePath, x, y, w, h, frame, scale = 1 }: ManipulateFrameOption,
+  { fileName, basePath, ...baseOption }: ManipulateFrameOption,
 ) {
-  const f = original.frames[frame]!;
+  function manipulateOneFrame({
+    x,
+    y,
+    w,
+    h,
+    frame,
+    scale,
+    blitImages,
+  }: Omit<ManipulateFrameOption, "fileName" | "basePath">) {
+    const jimp: Jimp = GifUtil.copyAsJimp(Jimp, original.frames[frame]!);
+    if (w > 0 && h > 0) {
+      jimp.crop(x, y, w, h);
+    }
 
-  const j: Jimp = GifUtil.copyAsJimp(Jimp, f).crop(x, y, w, h);
-  if (scale !== 1) {
-    j.scale(5, Jimp.RESIZE_NEAREST_NEIGHBOR);
+    const fixScale = scale ?? 1;
+    if (fixScale !== 1) {
+      jimp.scale(fixScale, Jimp.RESIZE_NEAREST_NEIGHBOR);
+    }
+
+    if (blitImages) {
+      for (const biOpt of blitImages) {
+        const biJimp = manipulateOneFrame({
+          ...biOpt,
+          scale: (biOpt.scale ?? 1) * fixScale,
+        });
+        jimp.blit(
+          biJimp,
+          (biOpt.posX ?? 0) * fixScale,
+          (biOpt.posY ?? 0) * fixScale,
+        );
+      }
+    }
+    return jimp;
   }
+
+  const j = manipulateOneFrame(baseOption);
 
   const outPath = url.fileURLToPath(new URL(fileName, basePath));
   await mkdirp(path.dirname(outPath));
